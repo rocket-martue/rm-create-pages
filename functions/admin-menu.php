@@ -212,3 +212,4 @@ function rm_create_pages_handle_form_submission() {
 	exit;
 }
 // admin_post_{action} フックに登録！これでフォーム送信時に上の関数が呼ばれるようになるよ！
+add_action( 'admin_post_rm_create_pages_submit', 'rm_create_pages_handle_form_submission' );
