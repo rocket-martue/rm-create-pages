@@ -87,7 +87,8 @@ function rm_create_pages_page_content() {
 		例：<br>
 		会社概要,company<br>
 		お問い合わせ,contact<br>
-		サービス,service/main (スラッシュで階層も作れるよ！)</p>
+		サービス,service<br>
+		メインサービス,service/main (※スラッシュで階層も作れるよ！ただし親ページが先に存在してないとダメ！)</p>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="rm_create_pages_submit">
@@ -150,7 +151,35 @@ function rm_create_pages_handle_form_submission() {
 
 		if ( count( $parts ) >= 2 ) {
 			$page_title = sanitize_text_field( $parts[0] );
-			$page_slug  = sanitize_title( $parts[1] ); // スラッグはWordPressの関数でいい感じに整形！
+
+			// スラッグが階層構造を持つ場合の特別処理を追加するよ！
+			if ( strpos( $parts[1], '/' ) !== false ) {
+				// スラッシュが含まれてる = 階層構造にしたい
+				$slug_parts = explode( '/', $parts[1] );
+				// 最後の部分だけを sanitize_title で整形
+				$last_part = array_pop( $slug_parts );
+				$last_part = sanitize_title( $last_part );
+				// 親階層はそのまま保持（必要に応じて sanitize）
+				$parent_path = '';
+				foreach ( $slug_parts as $parent_part ) {
+					$parent_path .= sanitize_title( $parent_part ) . '/';
+				}
+				$page_slug = $parent_path . $last_part;
+
+				// 親ページが存在するかチェック
+				$parent_slug = rtrim( $parent_path, '/' );
+				$parent_page = get_page_by_path( $parent_slug, OBJECT, 'page' );
+				if ( ! $parent_page ) {
+					// エラーか警告を表示したいなら、ここに処理を追加
+					// 今回は警告だけして続行
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( 'RMCP Warning: 親ページ "' . $parent_slug . '" が存在しないよ！階層構造にならないかも！' );
+					}
+				}
+			} else {
+				// 通常のスラッグ処理
+				$page_slug = sanitize_title( $parts[1] );
+			}
 
 			// 同じスラッグのページが既に存在するかチェック 既に存在する場合の処理 (スキップする)
 			$existing_page = get_page_by_path( $page_slug, OBJECT, 'page' );
