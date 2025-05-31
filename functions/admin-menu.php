@@ -64,6 +64,20 @@ function rm_create_pages_page_content() {
 			echo '<div id="message" class="error notice is-dismissible"><p>えっと、入力データがないみたいだよ？何か入力してね！🥺</p></div>';
 		}
 
+		// 警告メッセージがあったら表示！
+		if ( isset( $_GET['warnings'] ) ) {
+			$warnings_json = sanitize_text_field( wp_unslash( $_GET['warnings'] ) );
+			$warnings_arr  = json_decode( $warnings_json, true );
+
+			if ( ! empty( $warnings_arr ) && is_array( $warnings_arr ) ) {
+				echo '<div id="warnings-info" class="notice notice-warning is-dismissible"><p>⚠️ いくつか気になることがあったよ:</p><ul>';
+				foreach ( $warnings_arr as $warning ) {
+					echo '<li>' . esc_html( $warning ) . '</li>';
+				}
+				echo '</ul></div>';
+			}
+		}
+
 		// スキップされたページの情報があったら表示するよ！
 		// (successメッセージで既にスキップリストを表示してない場合だけね！)
 		if ( $display_skipped_separately && isset( $_GET['skipped_titles'] ) ) {
@@ -140,6 +154,7 @@ function rm_create_pages_handle_form_submission() {
 	$created_count       = 0;
 	$error_count         = 0;
 	$skipped_page_titles = array(); // スキップしたページのタイトルを入れとく配列！
+	$warning_messages    = array(); // 警告メッセージを入れとく配列！
 
 	foreach ( $pages_lines as $line ) {
 		$line = trim( $line );
@@ -170,11 +185,8 @@ function rm_create_pages_handle_form_submission() {
 				$parent_slug = rtrim( $parent_path, '/' );
 				$parent_page = get_page_by_path( $parent_slug, OBJECT, 'page' );
 				if ( ! $parent_page ) {
-					// エラーか警告を表示したいなら、ここに処理を追加
-					// 今回は警告だけして続行
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( 'RMCP Warning: 親ページ "' . $parent_slug . '" が存在しないよ！階層構造にならないかも！' );
-					}
+					// 警告メッセージを配列に追加！
+					$warning_messages[] = '「' . $page_title . '」の親ページ「' . $parent_slug . '」が見つからないよ！階層にならずに「' . str_replace( '/', '-', $parts[1] ) . '」みたいなスラッグになっちゃうかも💦';
 				}
 			} else {
 				// 通常のスラッグ処理
@@ -201,15 +213,15 @@ function rm_create_pages_handle_form_submission() {
 			$result = wp_insert_post( $new_page, true ); // 第2引数をtrueにするとエラー時にWP_Errorオブジェクトが返るよ
 
 			if ( is_wp_error( $result ) ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'RMCP Error: ' . $result->get_error_message() );
-				}
+				// エラーメッセージも配列に追加！
+				$warning_messages[] = '「' . $page_title . '」の作成でエラー発生: ' . $result->get_error_message();
 				++$error_count;
 			} else {
 				++$created_count;
 			}
 		} else {
 			// フォーマットが違う行はエラー扱い
+			$warning_messages[] = '「' . $line . '」の形式が正しくないよ！「タイトル,スラッグ」で入力してね😅';
 			++$error_count;
 		}
 	}
@@ -221,6 +233,11 @@ function rm_create_pages_handle_form_submission() {
 	if ( ! empty( $skipped_page_titles ) ) {
 		// スキップしたページがあったら、JSONにしてURLエンコードしてパラメータに追加！
 		$redirect_params['skipped_titles'] = rawurlencode( wp_json_encode( $skipped_page_titles ) );
+	}
+
+	if ( ! empty( $warning_messages ) ) {
+		// 警告メッセージがあったら、それも追加！
+		$redirect_params['warnings'] = rawurlencode( wp_json_encode( $warning_messages ) );
 	}
 
 	// 処理が終わったらメッセージ付きでリダイレクト

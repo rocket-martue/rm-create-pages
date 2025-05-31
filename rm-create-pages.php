@@ -3,7 +3,7 @@
  * Plugin Name: RM Create Pages
  * Plugin URI: https://github.com/rocket-martue/rm-create-pages
  * Description: 固定ページを一括で作成するためのプラグインだよ！管理画面からページタイトルとスラッグを入力して、サクッとページを作っちゃうの！マジ便利だから使ってみてね！😉
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Rocket Martue
  * Author URI: https://profiles.wordpress.org/rocketmartue/
  * License: GPL2 or later
