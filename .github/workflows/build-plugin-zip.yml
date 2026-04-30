@@ -58,7 +58,7 @@ jobs:
           zip -r rm-create-pages-${{ steps.get_version.outputs.version }}.zip rm-create-pages
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: rm-create-pages-${{ steps.get_version.outputs.version }}
           path: build/rm-create-pages-${{ steps.get_version.outputs.version }}.zip
